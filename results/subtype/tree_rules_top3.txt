@@ -1,0 +1,22 @@
+|--- GREB1 <= 9.33 (log2 expr; z=-0.29)
+|   |--- FAM189A2 <= 5.96 (log2 expr; z=-0.28)
+|   |   |--- SMC1B <= 6.21 (log2 expr; z=+1.26)
+|   |   |   |--- class: HER2
+|   |   |--- SMC1B > 6.21 (log2 expr; z=+1.26)
+|   |   |   |--- class: HER2
+|   |--- FAM189A2 > 5.96 (log2 expr; z=-0.28)
+|   |   |--- SMC1B <= 2.52 (log2 expr; z=-0.33)
+|   |   |   |--- class: HER2
+|   |   |--- SMC1B > 2.52 (log2 expr; z=-0.33)
+|   |   |   |--- class: BASAL
+|--- GREB1 > 9.33 (log2 expr; z=-0.29)
+|   |--- FAM189A2 <= 5.27 (log2 expr; z=-0.64)
+|   |   |--- SMC1B <= 8.06 (log2 expr; z=+2.05)
+|   |   |   |--- class: LUMB
+|   |   |--- SMC1B > 8.06 (log2 expr; z=+2.05)
+|   |   |   |--- class: BASAL
+|   |--- FAM189A2 > 5.27 (log2 expr; z=-0.64)
+|   |   |--- SMC1B <= 3.05 (log2 expr; z=-0.10)
+|   |   |   |--- class: LUMA
+|   |   |--- SMC1B > 3.05 (log2 expr; z=-0.10)
+|   |   |   |--- class: LUMB

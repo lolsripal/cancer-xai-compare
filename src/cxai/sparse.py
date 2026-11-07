@@ -11,7 +11,7 @@ from .models import evaluate
 
 def sparse_models(depth: int, seed: int) -> dict:
     return {
-        "small_logreg": LogisticRegression(class_weight="balanced", max_iter=2000, random_state=seed),
+        "small_logreg": LogisticRegression(class_weight="balanced", max_iter=5000, random_state=seed),
         f"tree_depth{depth}": DecisionTreeClassifier(
             max_depth=depth, class_weight="balanced", random_state=seed
         ),
@@ -31,7 +31,8 @@ def run(ranking: list[str], data, k_values: list[int], depth: int, seed: int):
     return pd.DataFrame(rows), artifacts
 
 
-def describe_tree(tree: DecisionTreeClassifier, genes: list[str], scaler_means, scaler_scales) -> str:
+def describe_tree(tree: DecisionTreeClassifier, genes: list[str], scaler_means, scaler_scales,
+                  class_names: list[str]) -> str:
     """Human-readable rules, with thresholds converted back to log2 expression units."""
     text = export_text(tree, feature_names=genes, decimals=3)
     lines = []
@@ -43,6 +44,8 @@ def describe_tree(tree: DecisionTreeClassifier, genes: list[str], scaler_means, 
                     z = float(line.split(op)[-1])
                     raw = z * scaler_scales[i] + scaler_means[i]
                     line = line.split(token)[0] + f"{g} {op.strip()} {raw:.2f} (log2 expr; z={z:+.2f})"
-        line = line.replace("class: 1", "class: TUMOR").replace("class: 0", "class: NORMAL")
+        if "class: " in line:
+            head, cls = line.rsplit("class: ", 1)
+            line = head + "class: " + class_names[int(float(cls))].upper()
         lines.append(line)
     return "\n".join(lines)

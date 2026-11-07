@@ -1,11 +1,15 @@
 """Loading, labelling and splitting TCGA-BRCA gene-expression data.
 
 The UCSC Xena ``HiSeqV2`` matrix is genes x samples with values
-log2(RSEM normalized count + 1). Sample type comes from the TCGA barcode:
-``TCGA-XX-XXXX-01`` is a primary tumor and ``-11`` is solid tissue normal.
-Many normals have a matched tumor from the same patient, so all splits are
-grouped by patient to stop the model "recognising the person" instead of the
-tissue.
+log2(RSEM normalized count + 1). Two prediction tasks are supported:
+
+* ``tumor_normal``: primary tumor (barcode ``-01``) vs. solid tissue normal
+  (``-11``). Many normals have a matched tumor from the same patient, so all
+  splits are grouped by patient to stop the model "recognising the person".
+* ``subtype``: PAM50 intrinsic subtype (LumA / LumB / Her2 / Basal) of primary
+  tumors, from the ``PAM50Call_RNAseq`` column of the Xena clinical matrix.
+  Those calls were made *from* the 50 PAM50 genes, so this task has a known
+  answer key and acts as a positive control for the explainers.
 """
 
 from __future__ import annotations
@@ -21,6 +25,8 @@ from sklearn.preprocessing import StandardScaler
 
 TUMOR_CODE = "01"
 NORMAL_CODE = "11"
+TASKS = ["tumor_normal", "subtype"]
+SUBTYPES = ["LumA", "LumB", "Her2", "Basal"]
 
 
 @dataclass
@@ -41,23 +47,26 @@ class Dataset:
     y_test: pd.Series
     genes: list[str]
     scaler: StandardScaler
-    raw_train: pd.DataFrame = field(repr=False)  # unscaled log2 expression (for fold changes)
+    class_names: list[str]
+    raw_train: pd.DataFrame = field(repr=False)  # unscaled log2 expression
     raw_test: pd.DataFrame = field(repr=False)
 
     @property
-    def X_trainval(self) -> pd.DataFrame:
-        return pd.concat([self.X_train, self.X_val])
+    def n_classes(self) -> int:
+        return len(self.class_names)
 
     @property
-    def y_trainval(self) -> pd.Series:
-        return pd.concat([self.y_train, self.y_val])
+    def binary(self) -> bool:
+        return self.n_classes == 2
 
     def summary(self) -> dict:
         def counts(y):
-            return {"n": int(len(y)), "tumor": int(y.sum()), "normal": int((1 - y).sum())}
+            vc = y.value_counts()
+            return {"n": int(len(y)), **{c: int(vc.get(i, 0)) for i, c in enumerate(self.class_names)}}
 
         return {
             "n_genes": len(self.genes),
+            "classes": self.class_names,
             "train": counts(self.y_train),
             "val": counts(self.y_val),
             "test": counts(self.y_test),
@@ -81,12 +90,28 @@ def load_xena_matrix(path: str | Path) -> pd.DataFrame:
     return df.T.astype(np.float32)
 
 
+def sample_codes(index: pd.Index) -> pd.Index:
+    return index.str.split("-").str[3].str[:2]
+
+
 def label_samples(expr: pd.DataFrame) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
-    """Keep primary tumors (1) and solid tissue normals (0); return X, y, patient ids."""
-    codes = expr.index.str.split("-").str[3].str[:2]
+    """Tumor-vs-normal labels: primary tumors = 1, solid tissue normals = 0."""
+    codes = sample_codes(expr.index)
     keep = codes.isin([TUMOR_CODE, NORMAL_CODE])
     X = expr.loc[keep]
-    y = pd.Series((codes[keep] == TUMOR_CODE).astype(int), index=X.index, name="tumor")
+    y = pd.Series((codes[keep] == TUMOR_CODE).astype(int), index=X.index, name="label")
+    patients = pd.Series(X.index.str[:12], index=X.index, name="patient")
+    return X, y, patients
+
+
+def label_subtypes(expr: pd.DataFrame, clinical: pd.DataFrame,
+                   column: str = "PAM50Call_RNAseq") -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+    """PAM50 subtype labels (index into ``SUBTYPES``) for primary tumors."""
+    calls = clinical[column].reindex(expr.index)
+    keep = (sample_codes(expr.index) == TUMOR_CODE) & calls.isin(SUBTYPES).values
+    X = expr.loc[keep]
+    y = pd.Series(calls[keep].map({s: i for i, s in enumerate(SUBTYPES)}).astype(int).values,
+                  index=X.index, name="label")
     patients = pd.Series(X.index.str[:12], index=X.index, name="patient")
     return X, y, patients
 
@@ -105,8 +130,10 @@ def prepare(
     n_genes: int = 2000,
     min_mean_expr: float = 1.0,
     seed: int = 42,
+    class_names: list[str] | None = None,
 ) -> Dataset:
     """Split by patient (64/16/20), select genes on train only, standardize."""
+    class_names = class_names or ["normal", "tumor"]
     trainval_idx, test_idx = grouped_split(y, patients, n_splits=5, seed=seed)
     train_idx, val_idx = grouped_split(
         y.loc[trainval_idx], patients.loc[trainval_idx], n_splits=5, seed=seed
@@ -120,26 +147,49 @@ def prepare(
     scaler = StandardScaler().fit(raw_train[genes])
 
     def scale(idx):
-        return pd.DataFrame(scaler.transform(X.loc[idx, genes]), index=idx, columns=genes).astype(np.float64)
+        return pd.DataFrame(scaler.transform(X.loc[idx, genes]), index=idx,
+                            columns=genes).astype(np.float64)
 
     return Dataset(
-        X_train=scale(train_idx),
-        X_val=scale(val_idx),
-        X_test=scale(test_idx),
-        y_train=y.loc[train_idx],
-        y_val=y.loc[val_idx],
-        y_test=y.loc[test_idx],
-        genes=genes,
-        scaler=scaler,
-        raw_train=X.loc[train_idx, genes],
-        raw_test=X.loc[test_idx, genes],
+        X_train=scale(train_idx), X_val=scale(val_idx), X_test=scale(test_idx),
+        y_train=y.loc[train_idx], y_val=y.loc[val_idx], y_test=y.loc[test_idx],
+        genes=genes, scaler=scaler, class_names=class_names,
+        raw_train=X.loc[train_idx, genes], raw_test=X.loc[test_idx, genes],
     )
 
 
-def load_tcga_brca(cfg: dict, seed: int) -> Dataset:
-    path = download(cfg["url"], cfg["path"])
-    X, y, patients = label_samples(load_xena_matrix(path))
-    return prepare(X, y, patients, cfg["n_genes"], cfg["min_mean_expr"], seed)
+_EXPR_CACHE: dict[str, pd.DataFrame] = {}
+
+
+def load_task_frames(task: str, cfg: dict):
+    """Return (X, y, patients, class_names) for a TCGA task, downloading if needed."""
+    path = str(download(cfg["url"], cfg["path"]))
+    if path not in _EXPR_CACHE:
+        _EXPR_CACHE[path] = load_xena_matrix(path)
+    expr = _EXPR_CACHE[path]
+    if task == "tumor_normal":
+        return (*label_samples(expr), ["normal", "tumor"])
+    if task == "subtype":
+        clin_path = download(cfg["clinical_url"], cfg["clinical_path"])
+        clinical = pd.read_csv(clin_path, sep="\t", index_col=0, low_memory=False)
+        return (*label_subtypes(expr, clinical), list(SUBTYPES))
+    raise ValueError(f"unknown task {task!r}; choose from {TASKS}")
+
+
+def load_task(task: str, cfg: dict, seed: int) -> Dataset:
+    X, y, patients, classes = load_task_frames(task, cfg)
+    return prepare(X, y, patients, cfg["n_genes"], cfg["min_mean_expr"], seed, classes)
+
+
+# ---------------------------------------------------------------------------
+# Synthetic cohorts for tests and ``--demo``
+# ---------------------------------------------------------------------------
+
+def _gene_list(gene_pool, signal, n_genes, rng):
+    flat = [g for s in signal for g in s] if signal and isinstance(signal[0], list) else list(signal)
+    others = [g for g in gene_pool if g not in set(flat)]
+    rng.shuffle(others)
+    return list(dict.fromkeys(flat)) + others[: n_genes - len(set(flat))]
 
 
 def make_synthetic(
@@ -149,18 +199,12 @@ def make_synthetic(
     n_genes: int = 300,
     seed: int = 0,
 ) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
-    """Small fake TCGA-like cohort for tests / ``--demo``.
+    """Fake tumor-vs-normal cohort: ``signal_genes`` are shifted up in tumors.
 
-    Each patient contributes a tumor sample; ~30% also contribute a matched
-    normal. ``signal_genes`` (which must be in ``gene_pool``) are shifted in
-    tumors, so a correct pipeline should rank them highly and find them
-    enriched.
+    Each patient contributes a tumor sample; ~30% also contribute a matched normal.
     """
     rng = np.random.default_rng(seed)
-    others = [g for g in gene_pool if g not in set(signal_genes)]
-    rng.shuffle(others)
-    genes = list(signal_genes) + others[: n_genes - len(signal_genes)]
-
+    genes = _gene_list(gene_pool, signal_genes, n_genes, rng)
     rows, labels, names = [], [], []
     for p in range(n_patients):
         patient_effect = rng.normal(0, 0.5, len(genes))
@@ -174,6 +218,32 @@ def make_synthetic(
             labels.append(lab)
             names.append(f"{pid}-{code}")
     X = pd.DataFrame(np.array(rows, dtype=np.float32), index=names, columns=genes)
-    y = pd.Series(labels, index=names, name="tumor")
+    y = pd.Series(labels, index=names, name="label")
+    patients = pd.Series(X.index.str[:12], index=names, name="patient")
+    return X, y, patients
+
+
+def make_synthetic_subtypes(
+    gene_pool: list[str],
+    class_signals: list[list[str]],
+    n_patients: int = 240,
+    n_genes: int = 300,
+    seed: int = 0,
+) -> tuple[pd.DataFrame, pd.Series, pd.Series]:
+    """Fake multi-class cohort: class ``c`` has ``class_signals[c]`` shifted up."""
+    rng = np.random.default_rng(seed)
+    genes = _gene_list(gene_pool, class_signals, n_genes, rng)
+    col = {g: i for i, g in enumerate(genes)}
+    rows, labels, names = [], [], []
+    for p in range(n_patients):
+        c = int(rng.integers(len(class_signals)))
+        x = 6 + rng.normal(0, 1, len(genes))
+        idx = [col[g] for g in class_signals[c]]
+        x[idx] += rng.normal(1.5, 0.5, len(idx))
+        rows.append(x)
+        labels.append(c)
+        names.append(f"TCGA-SY-{p:04d}-01")
+    X = pd.DataFrame(np.array(rows, dtype=np.float32), index=names, columns=genes)
+    y = pd.Series(labels, index=names, name="label")
     patients = pd.Series(X.index.str[:12], index=names, name="patient")
     return X, y, patients

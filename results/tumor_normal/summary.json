@@ -1,0 +1,274 @@
+{
+  "task": "tumor_normal",
+  "dataset": {
+    "n_genes": 2000,
+    "classes": [
+      "normal",
+      "tumor"
+    ],
+    "train": {
+      "n": 774,
+      "normal": 73,
+      "tumor": 701
+    },
+    "val": {
+      "n": 194,
+      "normal": 18,
+      "tumor": 176
+    },
+    "test": {
+      "n": 243,
+      "normal": 23,
+      "tumor": 220
+    }
+  },
+  "top_k": 50,
+  "test_metrics": {
+    "logreg": {
+      "roc_auc": 0.9996,
+      "pr_auc_normal": 0.9963,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0573
+    },
+    "random_forest": {
+      "roc_auc": 0.999,
+      "pr_auc_normal": 0.9901,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0324
+    },
+    "xgboost": {
+      "roc_auc": 0.9992,
+      "pr_auc_normal": 0.9923,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0221
+    },
+    "mlp": {
+      "roc_auc": 0.9996,
+      "pr_auc_normal": 0.9963,
+      "balanced_accuracy": 0.9955,
+      "f1": 0.9954,
+      "mcc": 0.9548,
+      "log_loss": 0.0277
+    }
+  },
+  "chance_jaccard_genes": {
+    "n": 2000,
+    "k": 50,
+    "mean": 0.012872478835716617,
+    "p95": 0.030927835051546393
+  },
+  "agreement_by_comparison_type": {
+    "different model and explainer": {
+      "jaccard_top_k": 0.081,
+      "spearman_union_top_k": 0.02,
+      "x_chance": 6.304
+    },
+    "same explainer, different model": {
+      "jaccard_top_k": 0.086,
+      "spearman_union_top_k": 0.069,
+      "x_chance": 6.653
+    },
+    "same model, different explainer": {
+      "jaccard_top_k": 0.477,
+      "spearman_union_top_k": 0.376,
+      "x_chance": 37.05
+    }
+  },
+  "consensus_top10": [
+    "COL10A1",
+    "RERGL",
+    "HAGHL",
+    "PKMYT1",
+    "C20orf103",
+    "ALDH1A2",
+    "MAPK8IP2",
+    "ITIH5",
+    "MMP11",
+    "CA4"
+  ],
+  "known_gene_overlap": {
+    "logreg:shap": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "logreg:permutation": {
+      "overlap": 0,
+      "precision_at_k": 0.0,
+      "p_value": 1.0
+    },
+    "logreg:native": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "random_forest:shap": {
+      "overlap": 2,
+      "precision_at_k": 0.04,
+      "p_value": 0.10304
+    },
+    "random_forest:permutation": {
+      "overlap": 2,
+      "precision_at_k": 0.04,
+      "p_value": 0.10304
+    },
+    "random_forest:native": {
+      "overlap": 2,
+      "precision_at_k": 0.04,
+      "p_value": 0.10304
+    },
+    "xgboost:shap": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "xgboost:permutation": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "xgboost:native": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "mlp:shap": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "mlp:permutation": {
+      "overlap": 1,
+      "precision_at_k": 0.02,
+      "p_value": 0.428777
+    },
+    "consensus": {
+      "overlap": 2,
+      "precision_at_k": 0.04,
+      "p_value": 0.10304
+    }
+  },
+  "significant_pathways_consensus": [],
+  "pam50_removal": {
+    "n_pam50_genes_in_features": 22,
+    "pam50": {
+      "roc_auc": 0.999,
+      "balanced_accuracy": 0.9972
+    },
+    "random": {
+      "roc_auc": 0.9991,
+      "balanced_accuracy": 0.9968
+    }
+  },
+  "modules": {
+    "n_modules": 1376,
+    "n_multi_gene": 177,
+    "largest": 120,
+    "top_k_modules": 34,
+    "chance_jaccard": {
+      "n": 1376,
+      "k": 34,
+      "mean": 0.012846723306183463,
+      "p95": 0.030303030303030304
+    },
+    "module_vs_gene": [
+      {
+        "level": "genes (top 50 of 2000)",
+        "comparison": "different model and explainer",
+        "jaccard_top_k": 0.066,
+        "x_chance": 5.139
+      },
+      {
+        "level": "genes (top 50 of 2000)",
+        "comparison": "same explainer, different model",
+        "jaccard_top_k": 0.072,
+        "x_chance": 5.57
+      },
+      {
+        "level": "genes (top 50 of 2000)",
+        "comparison": "same model, different explainer",
+        "jaccard_top_k": 0.345,
+        "x_chance": 26.84
+      },
+      {
+        "level": "modules (top 34 of 1376)",
+        "comparison": "different model and explainer",
+        "jaccard_top_k": 0.118,
+        "x_chance": 9.218
+      },
+      {
+        "level": "modules (top 34 of 1376)",
+        "comparison": "same explainer, different model",
+        "jaccard_top_k": 0.123,
+        "x_chance": 9.596
+      },
+      {
+        "level": "modules (top 34 of 1376)",
+        "comparison": "same model, different explainer",
+        "jaccard_top_k": 0.374,
+        "x_chance": 29.102
+      }
+    ],
+    "top5": [
+      {
+        "module": 1,
+        "label": "M1:CD300LG",
+        "size": 120,
+        "hallmark": "ADIPOGENESIS"
+      },
+      {
+        "module": 159,
+        "label": "M159:F2RL2",
+        "size": 2,
+        "hallmark": ""
+      },
+      {
+        "module": 7,
+        "label": "M7:COL10A1",
+        "size": 14,
+        "hallmark": "EPITHELIAL_MESENCHYMAL_TRANSITION"
+      },
+      {
+        "module": 4,
+        "label": "M4:CLDN19",
+        "size": 36,
+        "hallmark": "APICAL_JUNCTION"
+      },
+      {
+        "module": 10,
+        "label": "M10:SYNM",
+        "size": 14,
+        "hallmark": ""
+      }
+    ]
+  },
+  "sanity_label_randomization": [
+    {
+      "model": "logreg",
+      "test_roc_auc_random_labels": 0.6024,
+      "jaccard_vs_real_model": 0.0101
+    },
+    {
+      "model": "random_forest",
+      "test_roc_auc_random_labels": 0.1992,
+      "jaccard_vs_real_model": 0.0
+    },
+    {
+      "model": "xgboost",
+      "test_roc_auc_random_labels": 0.3423,
+      "jaccard_vs_real_model": 0.0
+    },
+    {
+      "model": "mlp",
+      "test_roc_auc_random_labels": 0.2972,
+      "jaccard_vs_real_model": 0.1765
+    }
+  ],
+  "planted_signal_genes": null
+}

@@ -1,0 +1,5 @@
+model,test_roc_auc_random_labels,jaccard_vs_real_model
+logreg,0.4805,0.0000
+random_forest,0.6315,0.0204
+xgboost,0.5307,0.0101
+mlp,0.4502,0.0870

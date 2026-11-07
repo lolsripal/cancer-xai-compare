@@ -17,6 +17,7 @@ from .models import PRETTY  # noqa: E402
 sns.set_theme(style="whitegrid", context="notebook")
 PALETTE = {"logreg": "#4C72B0", "random_forest": "#55A868", "xgboost": "#C44E52", "mlp": "#8172B3",
            "small_logreg": "#4C72B0", "tree_depth3": "#DD8452"}
+PALETTE["tree_depth4"] = "#DD8452"
 
 
 def _save(fig, path: Path):
@@ -25,14 +26,15 @@ def _save(fig, path: Path):
     plt.close(fig)
 
 
-def performance(metrics: pd.DataFrame, path: Path):
-    m = metrics[["roc_auc", "pr_auc_normal", "balanced_accuracy", "mcc"]].copy()
+def performance(metrics: pd.DataFrame, path: Path, title: str = "Held-out test performance"):
+    cols = [c for c in ["roc_auc", "pr_auc_normal", "balanced_accuracy", "f1", "mcc"] if c in metrics]
+    m = metrics[cols].copy()
     m.index = [PRETTY.get(i, i) for i in m.index]
     long = m.reset_index(names="model").melt(id_vars="model", var_name="metric", value_name="score")
     fig, ax = plt.subplots(figsize=(8, 4))
     sns.barplot(long, x="metric", y="score", hue="model", ax=ax)
     ax.set_ylim(max(0, long.score.min() - 0.05), 1.0)
-    ax.set_title("Held-out test performance (tumor vs. normal)")
+    ax.set_title(title)
     ax.legend(loc="lower left", fontsize=8)
     _save(fig, path)
 
@@ -110,27 +112,71 @@ def sparse_curve(sparse_df: pd.DataFrame, full: pd.DataFrame, path: Path):
 
 
 def pdp_grid(pdp: pd.DataFrame, path: Path):
+    """Binary: one line per model. Multi-class: XGBoost only, one line per class."""
     genes = list(dict.fromkeys(pdp.gene))
+    multiclass = pdp["class"].nunique() > 1
     cols = 3
     rows = int(np.ceil(len(genes) / cols))
-    fig, axes = plt.subplots(rows, cols, figsize=(4 * cols, 3 * rows), sharey=True)
+    fig, axes = plt.subplots(rows, cols, figsize=(4 * cols, 3 * rows), sharey=True, squeeze=False)
     for ax, g in zip(axes.ravel(), genes):
-        for name, d in pdp[pdp.gene == g].groupby("model"):
-            ax.plot(d.z_expression, d.p_tumor, label=PRETTY.get(name, name), color=PALETTE.get(name))
+        d = pdp[pdp.gene == g]
+        if multiclass:
+            for c, dc in d[d.model == "xgboost"].groupby("class", sort=False):
+                ax.plot(dc.z_expression, dc.probability, label=c)
+        else:
+            for name, dm in d.groupby("model"):
+                ax.plot(dm.z_expression, dm.probability, label=PRETTY.get(name, name), color=PALETTE.get(name))
         ax.set_title(g)
         ax.set_xlabel("expression (z-score)")
     for ax in axes.ravel()[len(genes):]:
         ax.axis("off")
-    axes.ravel()[0].set_ylabel("P(tumor), partial dependence")
+    axes.ravel()[0].set_ylabel("predicted probability (partial dependence)")
     axes.ravel()[0].legend(fontsize=7)
-    fig.suptitle("Partial dependence of each model on the top consensus genes")
+    fig.suptitle("Partial dependence on the top consensus genes" + (" (XGBoost, per subtype)" if multiclass else ""))
     _save(fig, path)
 
 
-def shap_beeswarm(X: pd.DataFrame, values: np.ndarray, title: str, path: Path, n: int = 20):
+def module_vs_gene_agreement(df: pd.DataFrame, path: Path):
+    """Bar chart: agreement / chance at gene level vs. module level, per comparison type."""
+    fig, ax = plt.subplots(figsize=(8, 4))
+    sns.barplot(df, x="comparison", y="x_chance", hue="level", ax=ax)
+    ax.axhline(1, c="k", ls="--", lw=1, label="chance")
+    ax.set_ylabel("mean Jaccard / chance Jaccard")
+    ax.set_xlabel("")
+    ax.set_title("Do models agree more on gene modules than on single genes?")
+    ax.tick_params(axis="x", labelsize=8)
+    ax.legend(fontsize=8)
+    _save(fig, path)
+
+
+def module_ablation(summary: pd.DataFrame, metric: str, path: Path):
+    models = summary["model"].unique()
+    fig, axes = plt.subplots(1, len(models), figsize=(4 * len(models), 3.6), sharey=True, squeeze=False)
+    for ax, name in zip(axes.ravel(), models):
+        d = summary[summary.model == name]
+        for removed, st in (("top_modules", "-o"), ("random", "--^")):
+            s = d[d.removed == removed].sort_values("genes_removed")
+            ax.plot(s.genes_removed, s[metric], st, ms=4,
+                    label="top consensus modules" if removed == "top_modules" else "same # random genes")
+        ax.set_title(PRETTY.get(name, name))
+        ax.set_xlabel("# genes removed")
+    axes.ravel()[0].set_ylabel(metric)
+    axes.ravel()[0].legend(fontsize=7)
+    fig.suptitle(f"Module ablation: retrain without whole top modules ({metric}, test set)")
+    _save(fig, path)
+
+
+def shap_beeswarm(X: pd.DataFrame, values: np.ndarray, title: str, path: Path, n: int = 20,
+                  class_names: list[str] | None = None):
+    """Beeswarm for binary SHAP (n, f, 1); stacked per-class bar chart for multi-class."""
     import shap
 
-    shap.summary_plot(values, X, max_display=n, show=False, plot_size=(8, 0.35 * n + 1.5))
+    if values.shape[2] == 1:
+        shap.summary_plot(values[:, :, 0], X, max_display=n, show=False, plot_size=(8, 0.35 * n + 1.5))
+    else:
+        shap.summary_plot([values[:, :, c] for c in range(values.shape[2])], X, plot_type="bar",
+                          class_names=class_names, max_display=n, show=False,
+                          plot_size=(8, 0.35 * n + 1.5))
     fig = plt.gcf()
     fig.suptitle(title)
     _save(fig, path)

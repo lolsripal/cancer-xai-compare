@@ -3,8 +3,10 @@ import pandas as pd
 import pytest
 from scipy.stats import hypergeom
 
-from cxai import biology, compare
-from cxai.data import grouped_split, label_samples, make_synthetic, prepare
+from cxai import biology, compare, modules, sanity
+from cxai.data import (grouped_split, label_samples, label_subtypes, make_synthetic,
+                       make_synthetic_subtypes, prepare)
+from cxai.models import evaluate, fit_all
 
 
 @pytest.fixture(scope="module")
@@ -85,7 +87,7 @@ def test_gmt_and_known_genes_load():
 def test_demo_pipeline_recovers_planted_signal(tmp_path):
     from cxai.pipeline import run
 
-    summary = run(demo=True, out=tmp_path / "results", models_dir=tmp_path / "models")
+    summary = run(task="tumor_normal", demo=True, out=tmp_path / "results", models_dir=tmp_path / "models")
     planted = set(summary["planted_signal_genes"])
     # The consensus ranking should be dominated by the genes we shifted in tumors...
     assert len(planted & set(summary["consensus_top10"])) >= 8
@@ -94,3 +96,78 @@ def test_demo_pipeline_recovers_planted_signal(tmp_path):
     assert "HALLMARK_E2F_TARGETS" in sig
     assert (tmp_path / "models" / "bundle.joblib").exists()
     assert (tmp_path / "results" / "figures" / "ablation_auc.png").exists()
+
+
+def test_label_subtypes_keeps_primary_tumors_with_pam50_call():
+    idx = ["TCGA-AA-0001-01", "TCGA-AA-0002-01", "TCGA-AA-0003-11", "TCGA-AA-0004-01"]
+    expr = pd.DataFrame(np.ones((4, 2)), index=idx, columns=["A", "B"])
+    clin = pd.DataFrame({"PAM50Call_RNAseq": ["Basal", "Normal", "LumA", "LumB"]}, index=idx)
+    X, y, _ = label_subtypes(expr, clin)
+    assert list(X.index) == ["TCGA-AA-0001-01", "TCGA-AA-0004-01"]  # Normal-like and -11 dropped
+    assert list(y) == [3, 1]  # SUBTYPES = LumA, LumB, Her2, Basal
+
+
+def test_multiclass_models_and_metrics():
+    pool = [f"G{i}" for i in range(300)]
+    signals = [pool[i * 5:(i + 1) * 5] for i in range(4)]
+    X, y, p = make_synthetic_subtypes(pool, signals, n_patients=200, n_genes=80, seed=0)
+    data = prepare(X, y, p, n_genes=60, min_mean_expr=0.0, seed=0, class_names=list("ABCD"))
+    models = fit_all(data.X_train, data.y_train, fast=True)
+    for m in models.values():
+        r = evaluate(m, data.X_test, data.y_test)
+        assert set(r) >= {"roc_auc", "balanced_accuracy", "f1", "log_loss"}
+        assert r["roc_auc"] > 0.8
+
+
+def test_chance_jaccard_matches_expectation():
+    c = sanity.chance_jaccard(2000, 50)
+    # E[overlap] = k^2 / n = 1.25, so Jaccard is about 1.25 / 98.75
+    assert c["mean"] == pytest.approx(1.25 / 98.75, rel=0.1)
+    assert c["p95"] >= c["mean"]
+
+
+def test_cluster_genes_groups_correlated_genes():
+    rng = np.random.default_rng(0)
+    base = rng.normal(size=(200, 2))
+    cols = {f"a{i}": base[:, 0] + rng.normal(0, 0.2, 200) for i in range(5)}
+    cols |= {f"b{i}": base[:, 1] + rng.normal(0, 0.2, 200) for i in range(4)}
+    cols |= {f"n{i}": rng.normal(size=200) for i in range(3)}
+    mods = modules.cluster_genes(pd.DataFrame(cols), min_abs_corr=0.6)
+    assert mods[[f"a{i}" for i in range(5)]].nunique() == 1
+    assert mods[[f"b{i}" for i in range(4)]].nunique() == 1
+    assert mods["a0"] != mods["b0"]
+    assert mods.value_counts().iloc[0] == 5 and mods.loc["a0"] == 1  # largest module is M1
+
+
+def test_module_shap_is_sum_within_module():
+    values = np.array([[[1.0], [-1.0], [2.0]], [[0.5], [0.5], [-1.0]]])  # (2 samples, 3 genes, 1 class)
+    mods = pd.Series([1, 1, 2], index=["g1", "g2", "g3"])
+    imp = modules.module_shap(values, ["g1", "g2", "g3"], mods)
+    assert imp[1] == pytest.approx((0 + 1.0) / 2)  # opposite signs cancel in sample 1
+    assert imp[2] == pytest.approx((2 + 1) / 2)
+
+
+def test_demo_subtype_pipeline_and_stability(tmp_path):
+    from cxai import stability
+    from cxai.pipeline import run
+
+    summary = run(task="subtype", demo=True, out=tmp_path / "r", models_dir=tmp_path / "m")
+    assert summary["dataset"]["classes"] == list("ABCD")
+    assert len(set(summary["planted_signal_genes"]) & set(summary["consensus_top10"])) >= 7
+    for row in summary["sanity_label_randomization"]:
+        assert row["test_roc_auc_random_labels"] < 0.75  # shuffled labels -> near chance
+    st = stability.run(["subtype"], demo=True, out=tmp_path / "s")
+    assert 0 <= st["subtype"]["within_method_stability_mean"] <= 1
+
+
+def test_site_builds_from_demo_results(tmp_path):
+    from cxai import site
+    from cxai.pipeline import run
+
+    res = tmp_path / "results"
+    for t in ("tumor_normal", "subtype"):
+        run(task=t, demo=True, out=res / t, models_dir=tmp_path / "m" / t)
+    out = site.build(results=res, out=tmp_path / "_site")
+    html = (out / "index.html").read_text()
+    assert "<title>" in html and "Plotly" in html and "Gene explorer" in html
+    assert (out / "figures" / "tumor_normal" / "agreement_jaccard.png").exists()

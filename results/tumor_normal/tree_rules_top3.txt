@@ -1,0 +1,19 @@
+|--- COL10A1 <= 5.91 (log2 expr; z=-1.41)
+|   |--- RERGL <= 5.40 (log2 expr; z=+0.79)
+|   |   |--- class: TUMOR
+|   |--- RERGL > 5.40 (log2 expr; z=+0.79)
+|   |   |--- HAGHL <= 6.44 (log2 expr; z=-0.11)
+|   |   |   |--- class: NORMAL
+|   |   |--- HAGHL > 6.44 (log2 expr; z=-0.11)
+|   |   |   |--- class: TUMOR
+|--- COL10A1 > 5.91 (log2 expr; z=-1.41)
+|   |--- RERGL <= 7.89 (log2 expr; z=+1.81)
+|   |   |--- COL10A1 <= 6.58 (log2 expr; z=-1.17)
+|   |   |   |--- class: TUMOR
+|   |   |--- COL10A1 > 6.58 (log2 expr; z=-1.17)
+|   |   |   |--- class: TUMOR
+|   |--- RERGL > 7.89 (log2 expr; z=+1.81)
+|   |   |--- RERGL <= 8.07 (log2 expr; z=+1.88)
+|   |   |   |--- class: NORMAL
+|   |   |--- RERGL > 8.07 (log2 expr; z=+1.88)
+|   |   |   |--- class: TUMOR

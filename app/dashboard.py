@@ -49,27 +49,35 @@ PATHWAY_NOTES = {
 st.set_page_config(page_title="Cancer AI Explainability Dashboard", layout="wide")
 
 
+TASK_LABELS = {"tumor_normal": "Tumor vs. normal tissue", "subtype": "PAM50 breast cancer subtype"}
+
+
 @st.cache_resource
-def load_bundle():
-    for p in (ROOT / "models" / "bundle.joblib", ROOT / "models" / "demo" / "bundle.joblib"):
+def load_bundle(task: str):
+    for demo in (False, True):
+        p = ROOT / "models" / ("demo" if demo else "") / task / "bundle.joblib"
         if p.exists():
             return joblib.load(p), p
     return None, None
 
 
 @st.cache_data
-def load_examples(demo: bool):
-    p = ROOT / "results" / ("demo" if demo else "") / "example_samples.csv"
+def load_examples(task: str, demo: bool):
+    p = ROOT / "results" / ("demo" if demo else "") / task / "example_samples.csv"
     return pd.read_csv(p, index_col=0) if p.exists() else None
 
 
-bundle, bundle_path = load_bundle()
 st.title("Cancer AI Explainability Dashboard")
 st.caption("Breast tissue RNA-seq → prediction → confidence → top contributing genes → pathway interpretation. "
            "**Research demo only. Not for diagnosis or clinical decisions.**")
 
+with st.sidebar:
+    st.header("0. Question")
+    task = st.radio("Prediction task", list(TASK_LABELS), format_func=TASK_LABELS.get)
+
+bundle, bundle_path = load_bundle(task)
 if bundle is None:
-    st.error("No trained models found. Run `python -m cxai.pipeline` (or `--demo`) first.")
+    st.error(f"No trained models for `{task}`. Run `python -m cxai.pipeline --task {task}` (or `--demo`) first.")
     st.stop()
 if bundle["demo"]:
     st.warning("Using the synthetic **demo** bundle. Run the full pipeline for real TCGA-BRCA models.")
@@ -77,13 +85,15 @@ if bundle["demo"]:
 genes: list[str] = bundle["genes"]
 scaler = bundle["scaler"]
 models: dict = bundle["models"]
+classes: list[str] = bundle["class_names"]
+binary = len(classes) == 2
 g2p: dict = bundle["gene_to_pathways"]
 known = set(bundle["known_genes"])
 
 # ---- input -------------------------------------------------------------
 with st.sidebar:
     st.header("1. Sample")
-    examples = load_examples(bundle["demo"])
+    examples = load_examples(task, bundle["demo"])
     source = st.radio("Input", ["Example held-out sample", "Upload CSV"])
     raw = None
     true_label = None
@@ -96,6 +106,7 @@ with st.sidebar:
             df = pd.read_csv(up, sep=sep, index_col=0)
             if df.shape[0] > df.shape[1]:  # genes x samples -> transpose
                 df = df.T
+            df = df.drop(columns=["true_label"], errors="ignore")
             choice = st.selectbox("Sample", df.index)
             raw = df.loc[choice]
     elif examples is not None:
@@ -123,43 +134,51 @@ if missing:
 X = pd.DataFrame(scaler.transform(vec.to_frame().T), columns=genes)
 
 # ---- prediction --------------------------------------------------------
-probs = {m: float(models[m].predict_proba(X)[0, 1]) for m in models}
-p = probs[explain_model]
-label = "TUMOR" if p >= 0.5 else "NORMAL"
-conf = p if p >= 0.5 else 1 - p
+probs = {m: models[m].predict_proba(X)[0] for m in models}
+P = probs[explain_model]
+c_hat = int(np.argmax(P))
+label = classes[c_hat].upper()
+preds = {m: int(np.argmax(v)) for m, v in probs.items()}
 
 c1, c2, c3 = st.columns(3)
 c1.metric(f"Prediction ({PRETTY[explain_model]})", label)
-c2.metric("Confidence", f"{conf:.1%}")
-c3.metric("Models agreeing", f"{sum((v >= 0.5) == (p >= 0.5) for v in probs.values())} / {len(probs)}")
+c2.metric("Confidence", f"{P[c_hat]:.1%}")
+c3.metric("Models agreeing", f"{sum(v == c_hat for v in preds.values())} / {len(preds)}")
 if true_label:
     st.caption(f"Ground truth for this held-out sample: **{true_label}**")
-st.dataframe(pd.DataFrame({"model": [PRETTY[m] for m in probs], "P(tumor)": list(probs.values())})
-             .style.format({"P(tumor)": "{:.3f}"}), hide_index=True)
+prob_df = pd.DataFrame([dict(model=PRETTY[m], **{f"P({c})": v[i] for i, c in enumerate(classes)})
+                        for m, v in probs.items()])
+if binary:
+    prob_df = prob_df.drop(columns=f"P({classes[0]})")
+st.dataframe(prob_df.style.format({c: "{:.3f}" for c in prob_df.columns if c != "model"}), hide_index=True)
 
 # ---- explanation -------------------------------------------------------
+target = classes[1] if binary else classes[c_hat]
 with st.spinner("Computing SHAP values..."):
-    sv = shap_values(explain_model, models[explain_model], bundle["background"], X)[0]
+    sv3 = shap_values(explain_model, models[explain_model], bundle["background"], X)
+sv = sv3[0, :, 0] if binary else sv3[0, :, c_hat]
+pos, neg = (classes[1], classes[0]) if binary else (target, f"not {target}")
 contrib = pd.DataFrame({
     "gene": genes, "log2_expression": vec.values, "z_score": X.iloc[0].values, "shap": sv,
 })
-contrib["pushes_toward"] = np.where(contrib.shap > 0, "tumor", "normal")
+contrib["pushes_toward"] = np.where(contrib.shap > 0, pos, neg)
 contrib["PAM50"] = contrib.gene.isin(known)
 contrib["hallmark_pathways"] = [", ".join(sorted(g2p.get(g, []))) for g in contrib.gene]
 top = contrib.reindex(contrib.shap.abs().sort_values(ascending=False).index).head(n_top)
 
-st.subheader("Top contributing genes")
-st.caption("SHAP value = how much this gene's expression moved the model's log-odds of TUMOR for this sample, "
-           "relative to an average training sample. Red pushes toward tumor, blue toward normal.")
+st.subheader(f"Top contributing genes (for the {target.upper()} output)")
+st.caption(f"SHAP value = how much this gene's expression moved the model's log-odds of {target.upper()} "
+           "for this sample, relative to an average training sample. "
+           f"Red pushes toward {pos}, blue toward {neg}.")
 chart = top[["gene", "shap"]].copy()
-chart["direction"] = np.where(chart.shap > 0, "toward tumor", "toward normal")
+chart["direction"] = np.where(chart.shap > 0, f"toward {pos}", f"toward {neg}")
 st.vega_lite_chart(chart, {
     "mark": "bar",
     "encoding": {
         "y": {"field": "gene", "type": "nominal", "sort": "-x", "title": None},
         "x": {"field": "shap", "type": "quantitative", "title": "SHAP value"},
         "color": {"field": "direction", "type": "nominal",
-                  "scale": {"domain": ["toward tumor", "toward normal"], "range": ["#C44E52", "#4C72B0"]}},
+                  "scale": {"domain": [f"toward {pos}", f"toward {neg}"], "range": ["#C44E52", "#4C72B0"]}},
     },
 }, width="stretch")
 st.dataframe(top.style.format({"log2_expression": "{:.2f}", "z_score": "{:+.2f}", "shap": "{:+.3f}"}),
@@ -178,7 +197,7 @@ if rows:
                genes=("gene", lambda g: ", ".join(g)))
           .sort_values("total_abs_shap", ascending=False).head(8).reset_index())
     for _, r in pw.iterrows():
-        toward = "tumor" if r.net_shap > 0 else "normal"
+        toward = pos if r.net_shap > 0 else neg
         note = PATHWAY_NOTES.get(r.pathway, "")
         st.markdown(f"**{r.pathway.replace('_', ' ').title()}**: net push toward *{toward}* "
                     f"(Σ|SHAP| = {r.total_abs_shap:.2f}). Genes: {r.genes}.  \n{note}")

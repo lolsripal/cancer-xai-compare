@@ -1,0 +1,13 @@
+ranking,overlap,list_size,set_size_in_background,expected,fold_enrichment,p_value,genes,precision_at_k,recall_of_pam50_in_features
+logreg:shap,1,50,22,0.55,1.818,0.4288,MMP11,0.02,0.04545
+logreg:permutation,0,50,22,0.55,0,1,,0,0
+logreg:native,1,50,22,0.55,1.818,0.4288,MMP11,0.02,0.04545
+random_forest:shap,2,50,22,0.55,3.636,0.103,"MMP11,UBE2C",0.04,0.09091
+random_forest:permutation,2,50,22,0.55,3.636,0.103,"MMP11,UBE2C",0.04,0.09091
+random_forest:native,2,50,22,0.55,3.636,0.103,"MMP11,UBE2C",0.04,0.09091
+xgboost:shap,1,50,22,0.55,1.818,0.4288,MMP11,0.02,0.04545
+xgboost:permutation,1,50,22,0.55,1.818,0.4288,MMP11,0.02,0.04545
+xgboost:native,1,50,22,0.55,1.818,0.4288,MMP11,0.02,0.04545
+mlp:shap,1,50,22,0.55,1.818,0.4288,MYBL2,0.02,0.04545
+mlp:permutation,1,50,22,0.55,1.818,0.4288,KRT14,0.02,0.04545
+consensus,2,50,22,0.55,3.636,0.103,"ESR1,MMP11",0.04,0.09091

@@ -1,0 +1,13 @@
+ranking,overlap,list_size,set_size_in_background,expected,fold_enrichment,p_value,genes,precision_at_k,recall_of_pam50_in_features
+logreg:shap,5,50,20,0.5,10,9.316e-05,"ESR1,FOXA1,FOXC1,MAPT,MYBL2",0.1,0.25
+logreg:permutation,5,50,20,0.5,10,9.316e-05,"ESR1,FOXA1,FOXC1,MAPT,MYBL2",0.1,0.25
+logreg:native,5,50,20,0.5,10,9.316e-05,"ESR1,FOXA1,FOXC1,MAPT,MYBL2",0.1,0.25
+random_forest:shap,12,50,20,0.5,24,1.603e-15,"ESR1,FOXA1,FOXC1,KRT14,KRT5,MIA,MLPH,MYBL2,NAT1,PGR,SFRP1,SLC39A6",0.24,0.6
+random_forest:permutation,12,50,20,0.5,24,1.603e-15,"ESR1,FOXA1,FOXC1,KRT14,MAPT,MIA,MLPH,MYBL2,NAT1,PGR,SFRP1,SLC39A6",0.24,0.6
+random_forest:native,11,50,20,0.5,22,1.067e-13,"ESR1,FOXA1,FOXC1,KRT14,KRT5,MIA,MLPH,MYBL2,PGR,SFRP1,SLC39A6",0.22,0.55
+xgboost:shap,11,50,20,0.5,22,1.067e-13,"EGFR,ESR1,FOXA1,FOXC1,KRT14,KRT5,MAPT,MIA,MLPH,MYBL2,SFRP1",0.22,0.55
+xgboost:permutation,6,50,20,0.5,12,5.343e-06,"ESR1,FOXA1,FOXC1,MAPT,MLPH,MYBL2",0.12,0.3
+xgboost:native,7,50,20,0.5,14,2.404e-07,"EGFR,ESR1,FOXA1,FOXC1,MLPH,PGR,TMEM45B",0.14,0.35
+mlp:shap,0,50,20,0.5,0,1,,0,0
+mlp:permutation,0,50,20,0.5,0,1,,0,0
+consensus,8,50,20,0.5,16,8.606e-09,"ESR1,FGFR4,FOXA1,FOXC1,MAPT,MLPH,MYBL2,SLC39A6",0.16,0.4

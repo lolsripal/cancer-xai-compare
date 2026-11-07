@@ -1,0 +1,17 @@
+task,ranking,mean_jaccard_across_splits,sd
+tumor_normal,logreg:native,0.226,0.039
+tumor_normal,logreg:shap,0.226,0.039
+tumor_normal,mlp:shap,0.014,0.010
+tumor_normal,random_forest:native,0.468,0.061
+tumor_normal,random_forest:shap,0.477,0.063
+tumor_normal,xgboost:native,0.268,0.042
+tumor_normal,xgboost:shap,0.365,0.062
+tumor_normal,consensus,0.239,0.055
+subtype,logreg:native,0.269,0.043
+subtype,logreg:shap,0.272,0.039
+subtype,mlp:shap,0.015,0.011
+subtype,random_forest:native,0.499,0.047
+subtype,random_forest:shap,0.488,0.044
+subtype,xgboost:native,0.171,0.029
+subtype,xgboost:shap,0.343,0.041
+subtype,consensus,0.257,0.051

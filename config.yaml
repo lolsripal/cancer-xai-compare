@@ -1,9 +1,11 @@
-# Experiment configuration for the full TCGA-BRCA run.
+# Experiment configuration for the TCGA-BRCA runs.
 seed: 42
 
 data:
   url: "https://tcga-xena-hub.s3.us-east-1.amazonaws.com/download/TCGA.BRCA.sampleMap%2FHiSeqV2.gz"
   path: "data/raw/HiSeqV2.gz"
+  clinical_url: "https://tcga-xena-hub.s3.us-east-1.amazonaws.com/download/TCGA.BRCA.sampleMap%2FBRCA_clinicalMatrix"
+  clinical_path: "data/raw/BRCA_clinicalMatrix"
   n_genes: 2000          # top-variance genes (selected on the training split only)
   min_mean_expr: 1.0     # drop genes with mean log2(norm count + 1) below this
 
@@ -21,3 +23,13 @@ ablation:
 sparse:
   k_values: [1, 2, 3, 5, 10, 20]
   tree_depth: 3
+
+modules:
+  min_abs_corr: 0.6      # genes join a module when average |Pearson r| >= this
+  perm_repeats: 3        # grouped permutation repeats per module
+  ablation_m: [1, 2, 5, 10, 20]
+
+stability:
+  seeds: [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+  shap_samples: 80
+  mlp_shap_samples: 15

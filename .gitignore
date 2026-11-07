@@ -16,3 +16,6 @@ results/demo/
 .DS_Store
 .vscode/
 .idea/
+
+# Built website (deployed by GitHub Actions)
+_site/

@@ -49,3 +49,20 @@ def ablate(
 def summarise(df: pd.DataFrame, metric: str = "roc_auc") -> pd.DataFrame:
     g = df.groupby(["model", "removed", "k"])[metric]
     return g.agg(["mean", "std"]).reset_index().rename(columns={"mean": metric, "std": f"{metric}_sd"})
+
+
+def ablate_gene_set(models: dict, drop: list[str], data, label: str, n_random: int, seed: int) -> pd.DataFrame:
+    """Retrain without a named gene set (e.g. all PAM50 genes) vs. the same number of random genes."""
+    rng = np.random.default_rng(seed)
+    drop = [g for g in drop if g in set(data.genes)]
+    rows = []
+    for name, model in models.items():
+        strategies = {label: drop}
+        for r in range(n_random):
+            strategies[f"random_{r}"] = list(rng.choice(data.genes, size=len(drop), replace=False))
+        for lab, d in strategies.items():
+            keep = [g for g in data.genes if g not in set(d)]
+            res = evaluate(refit(model, data.X_train[keep], data.y_train), data.X_test[keep], data.y_test)
+            rows.append({"model": name, "removed": "random" if lab.startswith("random") else lab,
+                         "k": len(d), **res})
+    return pd.DataFrame(rows)

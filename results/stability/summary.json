@@ -1,0 +1,117 @@
+{
+  "tumor_normal": {
+    "n_splits": 10,
+    "roc_auc_mean_sd": {
+      "logreg": [
+        0.9996,
+        0.0005
+      ],
+      "mlp": [
+        0.998,
+        0.0021
+      ],
+      "random_forest": [
+        0.9996,
+        0.0007
+      ],
+      "xgboost": [
+        0.9995,
+        0.001
+      ]
+    },
+    "balanced_accuracy_mean_sd": {
+      "logreg": [
+        0.993,
+        0.002
+      ],
+      "mlp": [
+        0.9783,
+        0.0228
+      ],
+      "random_forest": [
+        0.9893,
+        0.0155
+      ],
+      "xgboost": [
+        0.9873,
+        0.0149
+      ]
+    },
+    "within_method_stability_mean": 0.292,
+    "consensus_stability": 0.239,
+    "cross_model_agreement_mean": 0.118,
+    "cross_model_agreement_sd_over_splits": 0.009,
+    "stable_core_genes_ge_80pct": [
+      "MMP11",
+      "MME",
+      "COL10A1",
+      "PKMYT1",
+      "CES1",
+      "NEK2",
+      "CA4",
+      "FIGF",
+      "ATP1A2",
+      "TSLP"
+    ]
+  },
+  "subtype": {
+    "n_splits": 10,
+    "roc_auc_mean_sd": {
+      "logreg": [
+        0.9817,
+        0.0076
+      ],
+      "mlp": [
+        0.9704,
+        0.0078
+      ],
+      "random_forest": [
+        0.9742,
+        0.0069
+      ],
+      "xgboost": [
+        0.985,
+        0.0052
+      ]
+    },
+    "balanced_accuracy_mean_sd": {
+      "logreg": [
+        0.902,
+        0.0294
+      ],
+      "mlp": [
+        0.8651,
+        0.0204
+      ],
+      "random_forest": [
+        0.8715,
+        0.0224
+      ],
+      "xgboost": [
+        0.8709,
+        0.024
+      ]
+    },
+    "within_method_stability_mean": 0.294,
+    "consensus_stability": 0.257,
+    "cross_model_agreement_mean": 0.129,
+    "cross_model_agreement_sd_over_splits": 0.011,
+    "stable_core_genes_ge_80pct": [
+      "LOC145837",
+      "SCN2B",
+      "FOXC1",
+      "ESR1",
+      "ABCC2",
+      "GREB1",
+      "FOXA1",
+      "PNMT",
+      "MYBL2",
+      "NEFL",
+      "LOC100128977",
+      "MAPT",
+      "PPP1R14C",
+      "GDF5",
+      "ROPN1"
+    ]
+  }
+}

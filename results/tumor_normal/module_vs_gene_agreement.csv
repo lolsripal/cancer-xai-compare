@@ -1,0 +1,7 @@
+level,comparison,jaccard_top_k,x_chance
+genes (top 50 of 2000),different model and explainer,0.066,5.139
+genes (top 50 of 2000),"same explainer, different model",0.072,5.570
+genes (top 50 of 2000),"same model, different explainer",0.345,26.840
+modules (top 34 of 1376),different model and explainer,0.118,9.218
+modules (top 34 of 1376),"same explainer, different model",0.123,9.596
+modules (top 34 of 1376),"same model, different explainer",0.374,29.102
