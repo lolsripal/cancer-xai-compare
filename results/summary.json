@@ -1,0 +1,110 @@
+{
+  "dataset": {
+    "n_genes": 2000,
+    "train": {
+      "n": 774,
+      "tumor": 701,
+      "normal": 73
+    },
+    "val": {
+      "n": 194,
+      "tumor": 176,
+      "normal": 18
+    },
+    "test": {
+      "n": 243,
+      "tumor": 220,
+      "normal": 23
+    }
+  },
+  "top_k": 50,
+  "test_metrics": {
+    "logreg": {
+      "roc_auc": 0.9996,
+      "pr_auc_normal": 0.9963,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0573
+    },
+    "random_forest": {
+      "roc_auc": 0.999,
+      "pr_auc_normal": 0.9901,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0324
+    },
+    "xgboost": {
+      "roc_auc": 0.9992,
+      "pr_auc_normal": 0.9923,
+      "balanced_accuracy": 0.9977,
+      "f1": 0.9977,
+      "mcc": 0.9767,
+      "log_loss": 0.0287
+    },
+    "mlp": {
+      "roc_auc": 0.9994,
+      "pr_auc_normal": 0.9943,
+      "balanced_accuracy": 0.9955,
+      "f1": 0.9954,
+      "mcc": 0.9548,
+      "log_loss": 0.0491
+    }
+  },
+  "agreement_by_comparison_type": {
+    "different model and explainer": {
+      "jaccard_top_k": 0.095,
+      "spearman_union_top_k": 0.011
+    },
+    "same explainer, different model": {
+      "jaccard_top_k": 0.103,
+      "spearman_union_top_k": 0.03
+    },
+    "same model, different explainer": {
+      "jaccard_top_k": 0.548,
+      "spearman_union_top_k": 0.425
+    }
+  },
+  "consensus_top10": [
+    "COL10A1",
+    "CES1",
+    "MMP3",
+    "MEOX2",
+    "SLC6A2",
+    "PITX1",
+    "RERGL",
+    "PKMYT1",
+    "CA4",
+    "NEK2"
+  ],
+  "known_gene_overlap_consensus": {
+    "ranking": "consensus",
+    "overlap": 1,
+    "list_size": 50,
+    "set_size_in_background": 22,
+    "expected": 0.55,
+    "fold_enrichment": 1.8181818181818181,
+    "p_value": 0.428776648648638,
+    "genes": "MMP11"
+  },
+  "significant_pathways_consensus": [
+    {
+      "pathway": "HALLMARK_EPITHELIAL_MESENCHYMAL_TRANSITION",
+      "overlap": 6,
+      "fdr": 0.008339
+    },
+    {
+      "pathway": "HALLMARK_FATTY_ACID_METABOLISM",
+      "overlap": 4,
+      "fdr": 0.022456
+    },
+    {
+      "pathway": "HALLMARK_COAGULATION",
+      "overlap": 4,
+      "fdr": 0.025885
+    }
+  ],
+  "hallmark_genes_in_feature_space": 807,
+  "planted_signal_genes": null
+}

@@ -1,0 +1,23 @@
+# Experiment configuration for the full TCGA-BRCA run.
+seed: 42
+
+data:
+  url: "https://tcga-xena-hub.s3.us-east-1.amazonaws.com/download/TCGA.BRCA.sampleMap%2FHiSeqV2.gz"
+  path: "data/raw/HiSeqV2.gz"
+  n_genes: 2000          # top-variance genes (selected on the training split only)
+  min_mean_expr: 1.0     # drop genes with mean log2(norm count + 1) below this
+
+explain:
+  top_k: 50              # size of "top gene" lists compared across methods
+  shap_samples: 150      # validation samples explained with SHAP (tree/linear)
+  mlp_shap_samples: 40   # model-agnostic SHAP is slower; fewer samples for the MLP
+  perm_repeats: 5
+  pdp_genes: 6
+
+ablation:
+  k_values: [5, 10, 25, 50, 100, 200, 400]
+  n_random: 5
+
+sparse:
+  k_values: [1, 2, 3, 5, 10, 20]
+  tree_depth: 3

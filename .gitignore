@@ -1,0 +1,18 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+.pytest_cache/
+.ipynb_checkpoints/
+
+# Data and trained models (regenerate with the pipeline)
+data/
+models/
+results/demo/
+
+# OS / editors
+.DS_Store
+.vscode/
+.idea/

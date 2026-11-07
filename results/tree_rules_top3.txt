@@ -1,0 +1,19 @@
+|--- COL10A1 <= 5.91 (log2 expr; z=-1.41)
+|   |--- CES1 <= 6.49 (log2 expr; z=-0.23)
+|   |   |--- class: TUMOR
+|   |--- CES1 > 6.49 (log2 expr; z=-0.23)
+|   |   |--- CES1 <= 6.70 (log2 expr; z=-0.14)
+|   |   |   |--- class: NORMAL
+|   |   |--- CES1 > 6.70 (log2 expr; z=-0.14)
+|   |   |   |--- class: NORMAL
+|--- COL10A1 > 5.91 (log2 expr; z=-1.41)
+|   |--- CES1 <= 10.85 (log2 expr; z=+1.61)
+|   |   |--- CES1 <= 0.56 (log2 expr; z=-2.73)
+|   |   |   |--- class: TUMOR
+|   |   |--- CES1 > 0.56 (log2 expr; z=-2.73)
+|   |   |   |--- class: TUMOR
+|   |--- CES1 > 10.85 (log2 expr; z=+1.61)
+|   |   |--- MMP3 <= 6.94 (log2 expr; z=+0.02)
+|   |   |   |--- class: NORMAL
+|   |   |--- MMP3 > 6.94 (log2 expr; z=+0.02)
+|   |   |   |--- class: TUMOR
